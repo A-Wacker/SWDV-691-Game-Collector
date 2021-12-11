@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Game Collector</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.135.0.min.js"></script>
+    <script src="js/aws-cognito-sdk.min.js"></script>
+    <script src="js/amazon-cognito-identity.min.js"></script>
+  </head>
+  <body ng-app="GameCollector" style="background-color:#EBEBEB">
+    <style>
+      @media (max-width: 800px) {
+      	img {
+          max-width: 300px;
+      	}
+      }
+      
+      .nav-item {
+        display: flex;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+        flex-direction: row;
+      }
+      
+      a {
+        cursor: pointer;
+      }
+      
+      .btn-primary {
+        background-color: #0277BD;
+      }
+      
+      .games {
+        outline: 1px solid;
+        margin-top: 1px;
+        margin-left: 1px;
+      }
+      
+    </style>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <a class="navbar-brand" href="#">Game Collector</a>
+
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="index.html">Home <span class="sr-only">(current)</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-toggle="modal" data-target="#addGameModal">Add Game</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="rankings" href="rankings.html">Rankings</a>
+          </li>
+        </ul>
+        <div class="container">
+        <div class='btn-toolbar float-right'>
+          <button type="button" id="logInButton" class="btn btn-info btn-lg" data-toggle="modal" data-target="#loginModal">Log In / Register</button>
+          <button type="button" id="logOutButton" class="btn btn-danger btn-lg d-none">Log Out</button>
+        </div>
+    </div>
+      </div>
+    </nav>
+    
+    <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">
+            <span aria-hidden="true">&times;</span>
+            <span class="sr-only">Close</span>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="modal-body">
+          <form id="loginForm">
+            <input type="text" id ="email" name="email" placeholder="Email" />
+            <input type="password" id="pwd" name="pwd" placeholder="Password" />
+            <input type="submit" id="login-modal-button" name="login" class="btn btn-info" value="Login"/ >
+          </form>
+          <div class="login-help">
+            <a href="register.html">Register</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+    </div>
+    <br>
+    <div class="container-fluid" style="margin-left: 100px; margin-top: 20px">
+      <div id="gamesGrid" class="row" ng-controller="gamesListController">
+        <h4 class="NoGames"></h4>
+        <div class="col-md-3 games" ng-repeat="game in games">
+            <br>
+            <p style="margin-top: 5px;" align="center">
+              <strong> {{game.Title}}</strong>
+              <br>
+              <br>
+              <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#profileModal" data-gameid="{{game.GameID}}">Details</button>
+            </p>
+            <p>
+              <br>
+              <b>Description:</b> {{ game.Description }}
+              <br>
+              <b>Developer:</b> {{game.Developer}}
+              <br>
+              <b>Publisher:</b> {{game.Publisher}}
+            </p>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade bd-example-modal-lg" id="profileModal" tabindex="-1" aria-hidden="true" ng-controller="gameProfileController">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <h3>Game Profile</h3>
+            <button type="button" class="close" data-dismiss="modal">
+              <span aria-hidden="true">&times;</span>
+              <span class="sr-only">Close</span>
+            </button>
+          </div>
+        <!-- Modal Body -->
+          <div class="modal-body">
+            <br>
+            <p id="currentGameID" style="display:none">{{gameProfile.GameID}}</p>
+            
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="titleLabel">Title</span>
+              </div>
+              <input type="text" class="form-control" id="currentTitle" value="{{gameProfile.Title}}">
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="developerLabel">Developer</span>
+              </div>
+              <input type="text" class="form-control" id="currentDeveloper" value="{{gameProfile.Developer}}">
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="publisherLabel">Publisher</span>
+              </div>
+              <input type="text" class="form-control" id="currentPublisher" value="{{gameProfile.Publisher}}">
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="genreLabel">Genre</span>
+              </div>
+              <input type="text" class="form-control" id="currentGenre" value="{{gameProfile.Genre}}">
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="descriptionLabel">Description</span>
+              </div>
+              <textarea class="form-control" cols="40" rows="4" id="currentDescription">{{gameProfile.Description}}</textarea>
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="genreLabel">Rank</span>
+              </div>
+              <input type="number" min="1" max="5" class="form-control" id="currentRank" value="{{gameProfile.Rank}}">
+            </div>
+          </div>
+            <p align="center">
+              <button id="updateButton" align="center" type="button" data-target="#updateButton" class="btn btn-primary">Update</button>
+              <button id="deleteButton" align="center" type="button" data-target="#deleteButton" data-gameid={{gameProfile.GameID}} class="btn btn-danger">Delete</button>
+              <p class="p-3 mb-2 bg-danger text-white" id="ownershipLabel"style="text-align: center"> You do not own this game</p>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade bd-example-modal-lg" id="addGameModal" tabindex="-1" aria-hidden="true" ng-controller="addGameController">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <h3>Add Game</h3>
+            <button type="button" class="close" data-dismiss="modal">
+              <span aria-hidden="true">&times;</span>
+              <span class="sr-only">Close</span>
+            </button>
+          </div>
+        <!-- Modal Body -->
+          <div class="modal-body">
+            <br>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="titleLabel">Title</span>
+              </div>
+              <input type="text" class="form-control" aria-label="Title" id="profileTitle" aria-describedby="titleLabel">
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="developerLabel">Developer</span>
+              </div>
+              <input type="text" class="form-control" aria-label="Developer" id="profileDeveloper" aria-describedby="titleLabel">
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="publisherLabel">Publisher</span>
+              </div>
+              <input type="text" class="form-control" aria-label="Publisher" id="profilePublisher" aria-describedby="titleLabel">
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="genreLabel">Genre</span>
+              </div>
+              <input type="text" class="form-control" aria-label="Genre" id="profileGenre" name="profileGenre" aria-describedby="titleLabel">
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="descriptionLabel">Description</span>
+              </div>
+              <textarea class="form-control" cols="40" rows="4" aria-label="Description" id="profileDescription" aria-describedby="titleLabel"></textarea>
+            </div>
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="genreLabel">Rank</span>
+              </div>
+              <input type="number" min="1" max="5" class="form-control" aria-label="Rank" id="profileRank" placeholder="1 - 5" aria-describedby="titleLabel">
+            </div>
+            <p align="center">
+              <button id="clearButton" align="center" type="button" data-target="#clearButton" class="btn btn-warning">Clear</button>
+              <button id="submitButton" align="center" type="button" data-target="#submitButton" class="btn btn-success">Add</button>
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p>
+      <br>
+      <br>
+    </p>
+  </body>
+  <script>
+
+    var gameCollectorApiEndpoint = 'https://vx6ue9wew7.execute-api.us-east-2.amazonaws.com/prod';
+    var cognitoUserPoolId = 'us-east-2_3PxSR9o8H';
+    var cognitoUserPoolClientId = '2rluctflecp0t61j4nsntjkfhs';
+    var awsRegion = 'us-east-2';
+
+    var app = angular.module('GameCollector',[]);
+
+    var gridScope;
+
+    var filterScope;
+
+    var gameScope;
+    
+    var profileID;
+
+    initializeStorage();
+    
+    var configString = localStorage.getItem("awsConfig");
+    var config = JSON.parse(configString);
+    if(config != null) {
+      refreshAWSCredentials();
+      
+      loggedInDisplay();
+    }
+
+    function loggedInDisplay() {
+      $("#loginModal").modal("hide");
+      $("#logInButton").addClass("d-none");
+      $("#logOutButton").removeClass("d-none");
+    }
+
+    function initializeStorage() {
+      var identityPoolId = cognitoUserPoolId;
+      var userPoolId = cognitoUserPoolId;
+      var clientId = cognitoUserPoolClientId;
+      var loginPrefix = 'cognito-idp.' + awsRegion + '.amazonaws.com/' + identityPoolId;
+
+      localStorage.setItem('identityPoolId', identityPoolId);
+      localStorage.setItem('userPoolId', userPoolId);
+      localStorage.setItem('clientId', clientId);
+      localStorage.setItem('loginPrefix', loginPrefix);
+    }
+
+
+  $(document).on('click', '#logOutButton', function(event) {
+    localStorage.clear();
+    document.location.reload();
+  });
+
+    function loginUser() {
+
+      var userPoolId = localStorage.getItem('userPoolId');
+      var clientId = localStorage.getItem('clientId');
+      var identityPoolId = localStorage.getItem('identityPoolId');
+      var loginPrefix = localStorage.getItem('loginPrefix');
+
+      var poolData = {
+        UserPoolId : userPoolId, // Your user pool id here
+        ClientId : clientId // Your client id here
+      };
+      var userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+
+      var email = document.getElementById('email').value;
+      var pwd = document.getElementById('pwd').value;
+
+      var authenticationData =
+      {
+        'UserName': email,
+        'Password': pwd
+      }
+      var userData = {
+        Username : email,
+        Pool : userPool
+      };
+          
+      var authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+      var cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+      cognitoUser.authenticateUser(authenticationDetails, {
+        onSuccess: function (result) {
+          console.log('access token + \n' + result.getAccessToken().getJwtToken());
+
+          var sessionTokens =
+          {
+            IdToken: result.getIdToken(),
+            AccessToken: result.getAccessToken(),
+            RefreshToken: result.getRefreshToken()
+          };
+          localStorage.setItem('sessionTokens', JSON.stringify(sessionTokens));
+
+          AWS.config.region = 'us-east-2';
+          AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+            IdentityPoolId : identityPoolId,
+            Logins : {
+               loginPrefix : sessionTokens.IdToken.jwtToken
+            }
+          });
+          localStorage.setItem('awsConfig', JSON.stringify(AWS.config));
+          localStorage.setItem('email', email);
+
+          cognitoUser.getUserAttributes(function(err, result) {
+            if (err) {
+                alert(err);
+                return;
+            }
+            for (i = 0; i < result.length; i++) {
+                console.log('attribute ' + result[i].getName() + ' has value ' + result[i].getValue());
+                if (result[i].getName() == 'sub') {
+                  console.log('Overwriting userId into local storage');
+                  localStorage.setItem('userId', result[i].getValue());
+                }
+            }
+          });
+          
+          console.log('registering email!!')
+          registerUser(localStorage.getItem('email'));
+          loggedInDisplay();
+        },
+
+        onFailure: function(err) {
+          alert(err.message);
+        },
+
+      });
+    }
+
+    function refreshAWSCredentials() {
+
+      var userPoolId = localStorage.getItem('userPoolId');
+      var clientId = localStorage.getItem('clientId');
+      var identityPoolId = localStorage.getItem('identityPoolId');
+      var loginPrefix = localStorage.getItem('loginPrefix');
+
+      var poolData = {
+        UserPoolId : userPoolId,
+        ClientId : clientId
+      };
+      var userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+      var cognitoUser = userPool.getCurrentUser();
+
+      if (cognitoUser != null) {
+            cognitoUser.getSession(function(err, result) {
+                if (result) {
+                    console.log('You are now logged in.');
+                    cognitoUser.refreshSession(result.getRefreshToken(), function(err, result) {
+
+                        if (err) {//throw err;
+                            console.log('In the err: '+err);
+                        }
+                        else{
+                            localStorage.setItem('awsConfig', JSON.stringify(AWS.config));
+                            var sessionTokens =
+                            {
+                              IdToken: result.getIdToken(),
+                              AccessToken: result.getAccessToken(),
+                              RefreshToken: result.getRefreshToken()
+                            };
+                            localStorage.setItem("sessionTokens", JSON.stringify(sessionTokens));
+
+                        }
+                    });
+                }
+            });
+            
+            //getProfileID(localStorage.getItem('email'));
+        }
+    }
+
+    $(document).on('click', '#submitButton', function () {
+       
+       if ($('#profileTitle').val() == '')
+       {
+         alert('Title is empty!');
+       }
+       else if ($('#profileDeveloper').val() == '')
+       {
+         alert('Developer is empty!');
+       }
+       else if ($('#profilePublisher').val() == '')
+       {
+         alert('Publisher is empty!');
+       }
+       else if ($('#profileGenre').val() == '')
+       {
+         alert('Genre is empty!');
+       }
+       else if ($('#profileDescription').val() == '')
+       {
+         alert('Description is empty!');
+       }
+       else if ($('#profileRank').val() == '' || $('#profileRank').val() > 5)
+       {
+         alert('Rank is empty or greater than 5!');
+       }
+       else
+       {
+         var gameData = {
+         "title" : $('#profileTitle').val(),
+         "developer" : $('#profileDeveloper').val(),
+         "publisher" : $('#profilePublisher').val(),
+         "genre" : $('#profileGenre').val(),
+         "description" : $('#profileDescription').val(),
+         "rank" : $('#profileRank').val(),
+         "profileid" : localStorage.getItem('profileid')
+         }
+         
+         addGame(gameData, updateGrid); 
+       }
+    });
+    
+    $(document).on('click', '#deleteButton', function () {
+       var gameID = $('#deleteButton').attr('data-gameid');
+       
+       deleteGame(gameID, updateGrid);
+       
+    });
+    
+    $(document).on('click', '#clearButton', function () {
+      
+       $('#profileTitle').val('');
+       $('#profileDeveloper').val('');
+       $('#profilePublisher').val('');
+       $('#profileDescription').val('');
+       $('#profileGenre').val('');
+       $('#profileRank').val('');
+    });
+    
+    $(document).on('click', '#updateButton', function () {
+       if ($('#currentTitle').val() == '')
+       {
+         alert('Title is empty!');
+       }
+       else if ($('#currentDeveloper').val() == '')
+       {
+         alert('Developer is empty!');
+       }
+       else if ($('#currentPublisher').val() == '')
+       {
+         alert('Publisher is empty!');
+       }
+       else if ($('#currentGenre').val() == '')
+       {
+         alert('Genre is empty!');
+       }
+       else if ($('#currentDescription').val() == '')
+       {
+         alert('Description is empty!');
+       }
+       else if ($('#currentRank').val() == '' || $('#currentRank').val() > 5)
+       {
+         alert('Rank is empty or greater than 5!');
+       }
+       else
+       {
+         var gameData = {
+         "gameid" : $('#currentGameID').text(),
+         "title" : $('#currentTitle').val(),
+         "developer" : $('#currentDeveloper').val(),
+         "publisher" : $('#currentPublisher').val(),
+         "genre" : $('#currentGenre').val(),
+         "description" : $('#currentDescription').val(),
+         "rank" : $('#currentRank').val()
+       }
+       
+        updateGame(gameData, updateGrid);
+       }
+    });
+
+    app.controller('clearFilterController', function($scope) {
+    });
+
+    $("#loginForm").submit(function(event) {
+      event.preventDefault();
+      loginUser();
+    });
+
+    app.controller('gamesListController', function($scope) {
+
+      gridScope = $scope;
+
+      getAllGames(applyGridScope);
+
+    });
+
+    app.controller('gameProfileController', function($scope) {
+
+      gameScope = $scope;
+
+    });
+    
+    app.controller('addGameController', function($scope) {
+
+      addGameScope = $scope;
+
+    });
+
+    $('#profileModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget);
+      var gameID = button.data('gameid');
+      
+      getGame(gameID, updateModalText);
+
+    });
+    
+    function showDeleteUpdateButtons(game)
+    {
+      var id = game['ProfileID'];
+      var loggedUser = localStorage.getItem('profileid');
+      
+      console.log('This game profile id is: ' + id);
+      console.log('Logged in Profile is: ' + loggedUser);
+      
+      if (id == loggedUser) {
+        $("#deleteButton").show();
+        $("#updateButton").show();
+        $("#ownershipLabel").hide();
+      } else {
+        $("#deleteButton").hide();
+        $("#updateButton").hide();
+        $("#ownershipLabel").show();
+      }
+    }
+
+    function updateModalText(game) {
+      applygameScope(game);
+    }
+    
+    function updateGrid() {
+      document.location.reload();
+    }
+
+    function applyGridScope(gamesList) {
+      if (gamesList.length == 0)
+      {
+        $(".NoGames").html('There are no games...Add some via the "Add Game" menu');
+      }
+      
+      gridScope.games = gamesList;
+      gridScope.$apply();
+    }
+
+    function applygameScope(game) {
+      gameScope.gameProfile = game;
+      
+      gameScope.$apply();
+    }
+
+    function getAllGames(callback) {
+
+      var gameCollectorApi = gameCollectorApiEndpoint + '/collection';
+
+      $.ajax({
+        url : gameCollectorApi,
+        type : 'GET',
+        success : function(response) {
+          callback(response);
+        },
+        error : function(response) {
+          console.log("could not retrieve mysfits list.");
+          if (response.status == "401") {
+             refreshAWSCredentials();
+           }
+        }
+      });
+    }
+
+    function getGame(gameID, callback) {
+      var gameCollectorApi = gameCollectorApiEndpoint + '/collection/' + gameID;
+
+      $.ajax({
+        url : gameCollectorApi,
+        type : 'GET',
+        success : function(response) {
+          callback(response);
+          showDeleteUpdateButtons(response);
+        },
+        error : function(response) {
+          console.log("could not retrieve game.");
+          if (response.status == "401") {
+             refreshAWSCredentials();
+           }
+        }
+      });
+    }
+    
+    function addGame(data, callback) {
+      try
+      {
+        var gameCollectorApi = gameCollectorApiEndpoint + '/collection/add';
+
+        var sessionTokensString = localStorage.getItem('sessionTokens');
+        var sessionTokens = JSON.parse(sessionTokensString);
+        var IdToken = sessionTokens.IdToken;
+        var idJwt = IdToken.jwtToken;
+
+        $.ajax({
+          url : gameCollectorApi,
+          async : false,
+          type : 'POST',
+          headers : {'Authorization' : idJwt},
+          data : JSON.stringify(data),
+          contentType : "application/json",
+          success : function(response) {
+            callback();
+          },
+          error : function(response) {
+            console.log("could not add game.");
+             if (response.status == "401") {
+               
+               refreshAWSCredentials();
+             }
+          }
+        });
+      } catch (error) {
+        alert("You must be logged in to add a game.");
+      }
+    }
+    
+    function deleteGame(gameID, callback) {
+      try
+      {
+        var gameCollectorApi = gameCollectorApiEndpoint + '/collection/' + gameID + '/delete';
+
+        var sessionTokensString = localStorage.getItem('sessionTokens');
+        var sessionTokens = JSON.parse(sessionTokensString);
+        var IdToken = sessionTokens.IdToken;
+        var idJwt = IdToken.jwtToken;
+
+        $.ajax({
+          url : gameCollectorApi,
+          async : false,
+          type : 'POST',
+          headers : {'Authorization' : idJwt},
+          success : function(response) {
+            callback();
+          },
+          error : function(response) {
+            console.log("could not delete game.");
+             if (response.status == "401") {
+               
+               refreshAWSCredentials();
+             }
+          }
+        });
+      } catch (error) {
+        alert("You must be logged in to add a game.");
+      }
+    }
+    
+    function updateGame(data, callback) {
+      try
+      {
+        var gameCollectorApi = gameCollectorApiEndpoint + '/collection/update';
+
+        var sessionTokensString = localStorage.getItem('sessionTokens');
+        var sessionTokens = JSON.parse(sessionTokensString);
+        var IdToken = sessionTokens.IdToken;
+        var idJwt = IdToken.jwtToken;
+
+        $.ajax({
+          url : gameCollectorApi,
+          async : false,
+          type : 'POST',
+          headers : {'Authorization' : idJwt},
+          data : JSON.stringify(data),
+          contentType : "application/json",
+          success : function(response) {
+            callback();
+          },
+          error : function(response) {
+            console.log("could not add game.");
+             if (response.status == "401") {
+               
+               refreshAWSCredentials();
+             }
+          }
+        });
+      } catch (error) {
+        alert("You must be logged in to add a game.");
+      }
+    }
+    
+    function registerUser(email) {
+      try
+      {
+        var gameCollectorApi = gameCollectorApiEndpoint + '/collection/profile/register/' + email;
+        
+        var sessionTokensString = localStorage.getItem('sessionTokens');
+        var sessionTokens = JSON.parse(sessionTokensString);
+        var IdToken = sessionTokens.IdToken;
+        var idJwt = IdToken.jwtToken;
+        
+        $.ajax({
+          url : gameCollectorApi,
+          async : false,
+          type : 'POST',
+          headers : {'Authorization' : idJwt},
+          contentType : "application/json",
+          success : function(response) {
+            console.log("Here's the new profile id: " + response);
+            
+            localStorage.setItem('profileid', response);
+          },
+          error : function(response) {
+            if (response.status == "401") {
+               
+               refreshAWSCredentials();
+            } else if (response.status == "500") {
+              getProfileID(localStorage.getItem('email'));
+              
+            }
+			
+            console.log("could not register.");
+          }
+        });
+      } catch (error) {
+        alert(error);
+      }
+    }
+    
+    function getProfileID(email) {
+      try
+      {
+        var gameCollectorApi = gameCollectorApiEndpoint + '/collection/profile/' + email;
+        
+        var sessionTokensString = localStorage.getItem('sessionTokens');
+        var sessionTokens = JSON.parse(sessionTokensString);
+        var IdToken = sessionTokens.IdToken;
+        var idJwt = IdToken.jwtToken;
+        
+        $.ajax({
+          url : gameCollectorApi,
+          async : false,
+          type : 'GET',
+          success : function(response) {
+            
+            localStorage.setItem('profileid', response);
+            console.log('This is the current profile id: ' + response)
+          },
+          error : function(response) {
+            if (response.status == "401") {
+               
+               refreshAWSCredentials();
+            }
+          }
+        });
+      } catch (error) {
+        alert(error);
+      }
+    }
+
+  </script>
+</html>

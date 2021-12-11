@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Game Collector</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.135.0.min.js"></script>
+    <script src="js/aws-cognito-sdk.min.js"></script>
+    <script src="js/amazon-cognito-identity.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.2.2/Chart.min.js"></script>
+  </head>
+  <body ng-app="GameCollector" style="background-color:#EBEBEB">
+    <style>
+      @media (max-width: 800px) {
+      	img {
+          max-width: 300px;
+      	}
+      }
+      
+      .nav-item {
+        display: flex;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+        flex-direction: row;
+      }
+      
+      a {
+        cursor: pointer;
+      }
+      
+    </style>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <a class="navbar-brand" href="index.html">Game Collector</a>
+
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="index.html">Home <span class="sr-only">(current)</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-toggle="modal" data-target="#NotAvailable">Add Game</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Rankings</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <br>
+    <div class="container">
+      <div id="rankings" ng-controller="rankingsController">
+        <h4> Rankings for {{email}}</h4>
+        <br>
+        <canvas id="myChart"></canvas>
+        
+      </div>
+    </div>
+    <div class="modal fade bd-example-modal-lg" id="NotAvailable" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <h3>Not Available</h3>
+            <button type="button" class="close" data-dismiss="modal">
+              <span aria-hidden="true">&times;</span>
+              <span class="sr-only">Close</span>
+            </button>
+          </div>
+        <!-- Modal Body -->
+          <div class="modal-body">
+            <p align="center">
+              Please return to the Home page in order to add a game
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+  <script>
+    
+    var ctx = document.getElementById("myChart").getContext("2d");
+    
+    var gameCollectorApiEndpoint = 'https://vx6ue9wew7.execute-api.us-east-2.amazonaws.com/prod';
+    var cognitoUserPoolId = 'us-east-2_3PxSR9o8H';
+    var cognitoUserPoolClientId = '2rluctflecp0t61j4nsntjkfhs';
+    var awsRegion = 'us-east-2';
+
+    var app = angular.module('GameCollector',[]);
+
+    var gridScope;
+
+    var filterScope;
+
+    var gameScope;
+    
+    var profileID;
+    
+    app.controller('rankingsController', function($scope) {
+
+      gridScope = $scope;
+      
+      getOwnedGames(localStorage.getItem('profileid'), applyGridScope);
+    });
+    
+    function applyGridScope(gamesList) {
+
+      var email = localStorage.getItem('email');
+      
+      if (email == '')
+      {
+        alert("You must be logged in to view rankings");
+      }
+      else if (gamesList.length == 0)
+      {
+        alert("No games found for " + email + ". Go add some!");
+      }
+      
+      gridScope.games = gamesList;
+      gridScope.email = email;
+      
+      gridScope.$apply();
+    }
+
+    function getOwnedGames(profileID, callback) {
+
+      var gameCollectorApi = gameCollectorApiEndpoint + '/collection/rank/' + profileID;
+
+      $.ajax({
+        url : gameCollectorApi,
+        type : 'GET',
+        success : function(response) {
+          callback(response);
+          
+          var titles = [];
+          var ranks = [];
+          
+          for (let i = 0; i < response.length; i++)
+          {
+            titles.push(response[i]['Title']);
+            ranks.push(response[i]['Rank']);
+          }
+          
+          var myChart = new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels: titles,
+              datasets: [
+              {
+                label: "Rank",
+                data: ranks,
+                backgroundColor: "#616161",
+              },
+            ],
+          },
+          options: {
+            scales: {
+              yAxes: [{
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Rank'
+                },
+                ticks: {
+                  min: 0
+                }
+              }],
+              xAxes: [{
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Game Title'
+                }
+              }]
+            }
+          }
+        });
+        },
+        error : function(response) {
+          console.log("Could not retrieved owned games");
+        }
+      });
+    }
+
+  </script>
+</html>
