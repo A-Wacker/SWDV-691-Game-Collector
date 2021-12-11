@@ -1,7 +1,7 @@
 # SWDV-691-Game-Collector
 A web application to store and rank a collection of games.
 
-#Live Site
+# Live Site
 The web application is currently hosted through AWS at the following link: http://aw-game-collector.s3-website.us-east-2.amazonaws.com/
 ## Feature List
 1. Ability to add a game along with all associated metadata (title, genre, rating, description, etc) to the database
